@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import Image from "next/image";
 import { Scale } from "lucide-react";
 
@@ -8,33 +8,24 @@ const INTRO_DURATION_MS = 3000;
 const INTRO_MAX_WAIT_MS = 7000;
 
 export function Hero() {
-  const [isMobileViewport, setIsMobileViewport] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 767px)").matches,
-  );
-  const [phase, setPhase] = useState<"intro" | "reveal">(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 767px)").matches
-        ? "reveal"
-        : "intro",
-  );
+  // SSR + first client render must match: never read window in useState initializers.
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [phase, setPhase] = useState<"intro" | "reveal">("intro");
   const [introStarted, setIntroStarted] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
-    const onChange = () => setIsMobileViewport(mq.matches);
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
+    const apply = () => {
+      const mobile = mq.matches;
+      setIsMobileViewport(mobile);
+      if (mobile) {
+        setPhase("reveal");
+      }
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
-
-  useEffect(() => {
-    if (isMobileViewport && phase === "intro") {
-      setPhase("reveal");
-    }
-  }, [isMobileViewport, phase]);
 
   useEffect(() => {
     if (phase !== "intro" || isMobileViewport) return;
@@ -76,9 +67,9 @@ export function Hero() {
           }
         }
       `}</style>
-      {phase === "intro" && !isMobileViewport ? (
+      {phase === "intro" ? (
         <div
-          className="fixed inset-0 z-[60] w-screen h-screen overflow-hidden"
+          className="hero-intro-overlay fixed inset-0 z-[60] hidden h-screen w-screen overflow-hidden md:block"
           style={{ background: "linear-gradient(180deg, #0a0a0a 0%, #000000 100%)" }}
           aria-hidden="true"
         >

@@ -51,7 +51,7 @@ export function Navbar() {
     [prefersReducedMotion],
   );
 
-  const handleCopyEmail = (options?: { closeMenu?: boolean }) => {
+  const handleCopyEmail = () => {
     const email = "info@destinationlawyers.com";
     try {
       navigator.clipboard.writeText(email).catch(() => fallbackCopy(email));
@@ -60,9 +60,6 @@ export function Navbar() {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    if (options?.closeMenu) {
-      setOpen(false);
-    }
   };
 
   const fallbackCopy = (text: string) => {
@@ -165,7 +162,17 @@ export function Navbar() {
         boxShadow: scrolled ? "0 10px 28px rgba(0,0,0,0.35)" : "0 4px 18px rgba(0,0,0,0.18)",
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Mobile: tap outside menu panel / below header to close */}
+      {open ? (
+        <button
+          type="button"
+          className="lg:hidden fixed inset-0 z-[55] cursor-default border-0 bg-black/45 p-0"
+          aria-label="Close menu"
+          onClick={() => setOpen(false)}
+        />
+      ) : null}
+
+      <div className="relative z-[70] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <a href="#home" onClick={handleNavClick("#home")} className="flex items-center gap-2">
             <div className="w-10 h-10 bg-[#c41e2a] rounded flex items-center justify-center">
@@ -207,7 +214,7 @@ export function Navbar() {
             ))}
             {/* Desktop: click to copy email */}
             <button
-              onClick={() => handleCopyEmail()}
+              onClick={handleCopyEmail}
               className="bg-[#c41e2a] text-white px-6 py-2.5 hover:bg-[#a31822] transition-colors cursor-pointer"
               style={{ fontSize: "0.875rem", fontWeight: 600, letterSpacing: "0.05em" }}
             >
@@ -223,7 +230,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="lg:hidden bg-[#0a0a0a] border-t border-white/10">
+        <div className="relative z-[70] lg:hidden bg-[#0a0a0a] border-t border-white/10">
           <div className="px-4 py-6 space-y-4">
             {navLinks.map((link) => (
               <a
@@ -252,7 +259,8 @@ export function Navbar() {
                   PHONE
                 </a>
                 <button
-                  onClick={() => handleCopyEmail()}
+                  type="button"
+                  onClick={handleCopyEmail}
                   className="bg-[#c41e2a] text-white text-center px-4 py-3 hover:bg-[#a31822] transition-colors cursor-pointer"
                   style={{ fontSize: "0.82rem", fontWeight: 600, letterSpacing: "0.04em" }}
                 >
