@@ -2,19 +2,20 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { ArrowRight, Scale } from "lucide-react";
+import { Scale } from "lucide-react";
+
+const INTRO_DURATION_MS = 3000;
+const INTRO_MAX_WAIT_MS = 7000;
 
 export function Hero() {
   const [phase, setPhase] = useState<"intro" | "reveal">("intro");
-  const [introVideoError, setIntroVideoError] = useState(false);
+  const [introStarted, setIntroStarted] = useState(false);
 
   useEffect(() => {
     if (phase !== "intro") return;
-
-    const timer = setTimeout(() => setPhase("reveal"), 3000);
+    const hardTimeout = window.setTimeout(() => setPhase("reveal"), INTRO_MAX_WAIT_MS);
 
     const handleInteraction = () => {
-      clearTimeout(timer);
       setPhase("reveal");
     };
 
@@ -22,11 +23,17 @@ export function Hero() {
     window.addEventListener("keydown", handleInteraction, { once: true });
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(hardTimeout);
       window.removeEventListener("pointerdown", handleInteraction);
       window.removeEventListener("keydown", handleInteraction);
     };
   }, [phase]);
+
+  useEffect(() => {
+    if (phase !== "intro" || !introStarted) return;
+    const timer = window.setTimeout(() => setPhase("reveal"), INTRO_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [phase, introStarted]);
 
   return (
     <section id="home" className="relative min-h-screen bg-[#0a0a0a] overflow-hidden">
@@ -50,19 +57,20 @@ export function Hero() {
           style={{ background: "linear-gradient(180deg, #0a0a0a 0%, #000000 100%)" }}
           aria-hidden="true"
         >
-          {!introVideoError ? (
-            <video
-              className="absolute inset-0 w-full h-full object-cover"
-              autoPlay
-              muted
-              playsInline
-              preload="auto"
-              tabIndex={-1}
-              onError={() => setIntroVideoError(true)}
-            >
-              <source src="/intro.mp4" type="video/mp4" />
-            </video>
-          ) : null}
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            tabIndex={-1}
+            onCanPlay={() => setIntroStarted(true)}
+            onPlaying={() => setIntroStarted(true)}
+            onEnded={() => setPhase("reveal")}
+            onError={() => setPhase("reveal")}
+          >
+            <source src="/intro.mp4" type="video/mp4" />
+          </video>
         </div>
       ) : null}
 
@@ -156,11 +164,10 @@ export function Hero() {
             }}
           >
             <Image
-              src="/media/hero/photo-a.png"
+              src="/media/hero/photo-a.webp"
               alt="Man in overcoat"
               fill
-              priority
-              sizes="34vw"
+              sizes="17vw"
               className="w-full h-full object-cover"
               style={{ filter: "grayscale(100%) contrast(1.1)" }}
             />
@@ -185,10 +192,10 @@ export function Hero() {
             }}
           >
             <Image
-              src="/media/hero/photo-b.png"
+              src="/media/hero/photo-b.webp"
               alt="Professional silhouette"
               fill
-              sizes="28vw"
+              sizes="14vw"
               className="w-full h-full object-cover mx-[-3px] my-[0px]"
               style={{ filter: "grayscale(100%) contrast(1.1)" }}
             />
@@ -240,10 +247,10 @@ export function Hero() {
             }}
           >
             <Image
-              src="/media/hero/photo-c.png"
+              src="/media/hero/photo-c.webp"
               alt="Man in suit - street photography"
               fill
-              sizes="40vw"
+              sizes="20vw"
               className="w-full h-full object-cover"
               style={{ filter: "grayscale(100%) contrast(1.1)" }}
             />
@@ -268,10 +275,10 @@ export function Hero() {
             }}
           >
             <Image
-              src="/media/hero/photo-d.png"
+              src="/media/hero/photo-d.webp"
               alt="Businessman walking - monochrome"
               fill
-              sizes="35vw"
+              sizes="18vw"
               className="w-full h-full object-cover"
               style={{ filter: "grayscale(100%) contrast(1.1)" }}
             />
@@ -299,7 +306,7 @@ export function Hero() {
               src="/media/hero/photo-e.png"
               alt="Woman walking city street"
               fill
-              sizes="26vw"
+              sizes="13vw"
               className="w-full h-full object-cover m-[0px]"
               style={{ filter: "grayscale(100%) contrast(1.1)" }}
             />
@@ -315,13 +322,13 @@ export function Hero() {
           <div style={{ position: "absolute", width: "42%", height: "45%", backgroundColor: "#e8e0d4", top: "5%", right: "8%", opacity: phase === "reveal" ? 0.9 : 0, transform: phase === "reveal" ? "scale(1)" : "scale(0.5)", transition: "opacity 0.8s ease-out, transform 1.3s cubic-bezier(0.16,1,0.3,1)", transitionDelay: "0.15s" }} />
           <div style={{ position: "absolute", width: "20%", height: "10%", backgroundColor: "#a82230", bottom: "24%", left: "30%", zIndex: 1, opacity: phase === "reveal" ? 0.9 : 0, transform: phase === "reveal" ? "scale(1)" : "scale(0.4)", transition: "opacity 0.8s ease-out, transform 1.1s cubic-bezier(0.16,1,0.3,1)", transitionDelay: "0.25s" }} />
           <div style={{ position: "absolute", width: "40%", height: "65%", top: "4%", left: "3%", opacity: phase === "reveal" ? 1 : 0, transform: phase === "reveal" ? "translate(0,0) scale(1)" : "translate(30px,15px) scale(0.85)", transition: "opacity 1s ease-out, transform 1.5s cubic-bezier(0.16,1,0.3,1)", transitionDelay: "0.4s", overflow: "hidden", boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}>
-            <Image src="/media/hero/photo-a.png" alt="Man in overcoat" fill sizes="40vw" className="object-cover" style={{ filter: "grayscale(100%) contrast(1.1)" }} />
+            <Image src="/media/hero/photo-a.webp" alt="Man in overcoat" fill sizes="40vw" className="object-cover" style={{ filter: "grayscale(100%) contrast(1.1)" }} />
           </div>
           <div style={{ position: "absolute", width: "44%", height: "50%", top: "2%", right: "4%", opacity: phase === "reveal" ? 1 : 0, transform: phase === "reveal" ? "translate(0,0) scale(1)" : "translate(-25px,10px) scale(0.85)", transition: "opacity 1s ease-out, transform 1.5s cubic-bezier(0.16,1,0.3,1)", transitionDelay: "0.55s", overflow: "hidden", boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}>
-            <Image src="/media/hero/photo-c.png" alt="Man in suit" fill sizes="44vw" className="object-cover" style={{ filter: "grayscale(100%) contrast(1.1)" }} />
+            <Image src="/media/hero/photo-c.webp" alt="Man in suit" fill sizes="44vw" className="object-cover" style={{ filter: "grayscale(100%) contrast(1.1)" }} />
           </div>
           <div style={{ position: "absolute", width: "38%", height: "38%", bottom: "2%", right: "6%", opacity: phase === "reveal" ? 1 : 0, transform: phase === "reveal" ? "translate(0,0) scale(1)" : "translate(-15px,-15px) scale(0.85)", transition: "opacity 1s ease-out, transform 1.5s cubic-bezier(0.16,1,0.3,1)", transitionDelay: "0.7s", overflow: "hidden", boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}>
-            <Image src="/media/hero/photo-d.png" alt="Businessman walking" fill sizes="38vw" className="object-cover" style={{ filter: "grayscale(100%) contrast(1.1)" }} />
+            <Image src="/media/hero/photo-d.webp" alt="Businessman walking" fill sizes="38vw" className="object-cover" style={{ filter: "grayscale(100%) contrast(1.1)" }} />
           </div>
           <div style={{ position: "absolute", width: "25%", height: "28%", bottom: "10%", left: "22%", zIndex: 2, opacity: phase === "reveal" ? 1 : 0, transform: phase === "reveal" ? "translate(0,0) scale(1)" : "translate(15px,-10px) scale(0.85)", transition: "opacity 1s ease-out, transform 1.5s cubic-bezier(0.16,1,0.3,1)", transitionDelay: "0.85s", overflow: "hidden", boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}>
             <Image src="/media/hero/photo-e.png" alt="Woman walking city" fill sizes="25vw" className="object-cover" style={{ filter: "grayscale(100%) contrast(1.1)" }} />

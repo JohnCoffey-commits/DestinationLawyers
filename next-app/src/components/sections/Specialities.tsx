@@ -78,11 +78,33 @@ const TOTAL = specialities.length;
 export function Specialities() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [textVisible, setTextVisible] = useState(true);
+  const [isInView, setIsInView] = useState(false);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ── Viewport gate (delay media work below the fold) ───────────────────────
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "220px 0px" },
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
   // ── Video play/pause control ─────────────────────────────────────────────
   useEffect(() => {
+    if (!isInView) return;
     videoRefs.current.forEach((video, i) => {
       if (!video) return;
       if (i === activeIndex) {
@@ -94,7 +116,7 @@ export function Specialities() {
         video.currentTime = 0;
       }
     });
-  }, [activeIndex]);
+  }, [activeIndex, isInView]);
 
   // ── Auto-rotation ────────────────────────────────────────────────────────
   const startTimer = useCallback(() => {
@@ -109,11 +131,12 @@ export function Specialities() {
   }, []);
 
   useEffect(() => {
+    if (!isInView) return;
     startTimer();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [startTimer]);
+  }, [startTimer, isInView]);
 
   // ── Manual selection ─────────────────────────────────────────────────────
   const goTo = useCallback(
@@ -132,7 +155,7 @@ export function Specialities() {
   const active = specialities[activeIndex];
 
   return (
-    <section id="specialities" className="py-24 bg-[#f8f8f8]">
+    <section id="specialities" ref={sectionRef} className="py-24 bg-[#f8f8f8]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ── Desktop alignment wrapper ── */}
@@ -169,28 +192,33 @@ export function Specialities() {
                   borderRadius: "8px",
                 }}
               >
-                {specialities.map((item, i) => (
-                  <video
-                    key={item.videoSrc}
-                    ref={(el) => {
-                      videoRefs.current[i] = el;
-                    }}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    style={{
-                      opacity: i === activeIndex ? 1 : 0,
-                      transition: `opacity ${FADE_DURATION}ms ease`,
-                      zIndex: i === activeIndex ? 2 : 1,
-                    }}
-                    autoPlay={i === 0}
-                    muted
-                    loop
-                    playsInline
-                    preload="metadata"
-                    aria-hidden="true"
-                  >
-                    <source src={item.videoSrc} type="video/mp4" />
-                  </video>
-                ))}
+                {specialities.map((item, i) => {
+                  const shouldPreload =
+                    isInView &&
+                    (i === activeIndex || i === (activeIndex + 1) % TOTAL);
+                  return (
+                    <video
+                      key={item.videoSrc}
+                      ref={(el) => {
+                        videoRefs.current[i] = el;
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      style={{
+                        opacity: i === activeIndex ? 1 : 0,
+                        transition: `opacity ${FADE_DURATION}ms ease`,
+                        zIndex: i === activeIndex ? 2 : 1,
+                      }}
+                      autoPlay={isInView && i === 0}
+                      muted
+                      loop
+                      playsInline
+                      preload={shouldPreload ? "metadata" : "none"}
+                      aria-hidden="true"
+                    >
+                      <source src={item.videoSrc} type="video/mp4" />
+                    </video>
+                  );
+                })}
               </div>
 
               {/* Navigation dots */}

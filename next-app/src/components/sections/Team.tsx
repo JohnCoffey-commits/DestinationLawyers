@@ -12,7 +12,7 @@ const teamMembers = [
     quote: "I ensure no detail is overlooked, providing the thorough groundwork that every successful legal strategy depends on.",
     email: "info@destinationlawyers.com",
     phone: "02 0804 1213",
-    image: "/media/team/Ken.png",
+    image: "/media/team/Ken.webp",
   },
   {
     name: "Sophie Liu",
@@ -21,7 +21,7 @@ const teamMembers = [
     quote: "Precision and preparation define my practice — I stand with my clients when the stakes are at their highest.",
     email: "info@destinationlawyers.com",
     phone: "02 0804 1213",
-    image: "/media/team/Sophie.png",
+    image: "/media/team/Sophie.webp",
   },
   {
     name: "Chloe He",
@@ -30,7 +30,7 @@ const teamMembers = [
     quote: "My clients trust me to protect what matters most — I bring tenacity and empathy to every case I take on.",
     email: "chloe.he@destlawyers.com.au",
     phone: "02 0804 1213",
-    image: "/media/team/Chloe.png",
+    image: "/media/team/Chloe.webp",
   },
   {
     name: "Samuel Li",
@@ -39,7 +39,7 @@ const teamMembers = [
     quote: "I lead every matter with strategic clarity, turning complex legal challenges into decisive outcomes for my clients.",
     email: "info@destinationlawyers.com",
     phone: "02 0804 1213",
-    image: "/media/team/Samuel.png",
+    image: "/media/team/Samuel.webp",
   },
   {
     name: "Jane Xiao",
@@ -48,7 +48,7 @@ const teamMembers = [
     quote: "Behind every strong case is meticulous research and relentless attention to detail — that is what I deliver every day.",
     email: "info@destinationlawyers.com",
     phone: "02 0804 1213",
-    image: "/media/team/Jane.png",
+    image: "/media/team/Jane.webp",
   },
   {
     name: "John Chan",
@@ -57,7 +57,7 @@ const teamMembers = [
     quote: "I navigate cross-border complexities with confidence, ensuring my clients are protected wherever the law takes them.",
     email: "info@destinationlawyers.com",
     phone: "02 0804 1213",
-    image: "/media/team/John.png",
+    image: "/media/team/John.webp",
   },
 ];
 
@@ -143,7 +143,7 @@ export function Team() {
                 src={member.image}
                 alt={member.name}
                 fill
-                sizes="100vw"
+                sizes="(max-width: 768px) 70vw, (max-width: 1280px) 30vw, 22vw"
                 className="absolute inset-0 w-full h-full object-cover object-top"
                 style={{
                   filter: anyHovered && !isHovered
