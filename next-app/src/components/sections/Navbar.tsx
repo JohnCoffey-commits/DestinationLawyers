@@ -51,7 +51,7 @@ export function Navbar() {
     [prefersReducedMotion],
   );
 
-  const handleCopyEmail = () => {
+  const handleCopyEmail = (options?: { closeMenu?: boolean }) => {
     const email = "info@destinationlawyers.com";
     try {
       navigator.clipboard.writeText(email).catch(() => fallbackCopy(email));
@@ -60,7 +60,9 @@ export function Navbar() {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    setOpen(false);
+    if (options?.closeMenu) {
+      setOpen(false);
+    }
   };
 
   const fallbackCopy = (text: string) => {
@@ -205,7 +207,7 @@ export function Navbar() {
             ))}
             {/* Desktop: click to copy email */}
             <button
-              onClick={handleCopyEmail}
+              onClick={() => handleCopyEmail()}
               className="bg-[#c41e2a] text-white px-6 py-2.5 hover:bg-[#a31822] transition-colors cursor-pointer"
               style={{ fontSize: "0.875rem", fontWeight: 600, letterSpacing: "0.05em" }}
             >
@@ -239,14 +241,30 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
-            {/* Mobile: click to copy email */}
-            <button
-              onClick={handleCopyEmail}
-              className="block w-full bg-[#c41e2a] text-white text-center px-6 py-3 hover:bg-[#a31822] transition-colors cursor-pointer"
-              style={{ fontSize: "0.875rem", fontWeight: 600 }}
-            >
-              {copied ? "✓ Email Copied!" : "Free Consultation"}
-            </button>
+            {/* Mobile quick actions */}
+            <div className="pt-1">
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href="tel:0208041213"
+                  className="bg-[#c41e2a] text-white text-center px-4 py-3 hover:bg-[#a31822] transition-colors"
+                  style={{ fontSize: "0.82rem", fontWeight: 600, letterSpacing: "0.04em" }}
+                >
+                  PHONE
+                </a>
+                <button
+                  onClick={() => handleCopyEmail()}
+                  className="bg-[#c41e2a] text-white text-center px-4 py-3 hover:bg-[#a31822] transition-colors cursor-pointer"
+                  style={{ fontSize: "0.82rem", fontWeight: 600, letterSpacing: "0.04em" }}
+                >
+                  EMAIL
+                </button>
+              </div>
+              {copied ? (
+                <p className="mt-2 text-[#c9bfb0]" style={{ fontSize: "0.73rem" }}>
+                  copied info@destinationlawyers.com
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       )}

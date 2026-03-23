@@ -156,15 +156,15 @@ export function Contact() {
             >
               Email
             </p>
-            <div className="mt-2 flex flex-col items-start">
+            <div className="mt-2 flex flex-col items-start gap-1.5">
               <button
                 type="button"
                 onClick={() => {
                   pulseCard("email");
                   void handleCopyEmail("info@destinationlawyers.com");
                 }}
-                className="text-left text-[#2a2218]"
-                style={{ fontSize: "0.8rem", lineHeight: 1.5 }}
+                className="w-full rounded-md border border-[#d7cfc3] bg-[#ece3d8] px-2.5 py-1.5 text-left text-[#2a2218] active:scale-[0.99] transition-transform"
+                style={{ fontSize: "0.72rem", lineHeight: 1.4, wordBreak: "break-all" }}
               >
                 info@destinationlawyers.com
               </button>
@@ -174,13 +174,13 @@ export function Contact() {
                   pulseCard("email");
                   void handleCopyEmail("chloe.he@destlawyers.com.au");
                 }}
-                className="mt-1 text-left text-[#2a2218]"
-                style={{ fontSize: "0.8rem", lineHeight: 1.5 }}
+                className="w-full rounded-md border border-[#d7cfc3] bg-[#ece3d8] px-2.5 py-1.5 text-left text-[#2a2218] active:scale-[0.99] transition-transform"
+                style={{ fontSize: "0.72rem", lineHeight: 1.4, wordBreak: "break-all" }}
               >
                 chloe.he@destlawyers.com.au
               </button>
               {copiedEmail ? (
-                <span className="mt-2 text-[#0a0a0a]" style={{ fontSize: "0.7rem" }}>
+                <span className="mt-1.5 text-[#0a0a0a]" style={{ fontSize: "0.68rem", lineHeight: 1.3 }}>
                   Copied {copiedEmail}
                 </span>
               ) : null}
