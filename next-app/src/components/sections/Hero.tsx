@@ -8,11 +8,36 @@ const INTRO_DURATION_MS = 3000;
 const INTRO_MAX_WAIT_MS = 7000;
 
 export function Hero() {
-  const [phase, setPhase] = useState<"intro" | "reveal">("intro");
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches,
+  );
+  const [phase, setPhase] = useState<"intro" | "reveal">(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches
+        ? "reveal"
+        : "intro",
+  );
   const [introStarted, setIntroStarted] = useState(false);
 
   useEffect(() => {
-    if (phase !== "intro") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const onChange = () => setIsMobileViewport(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (isMobileViewport && phase === "intro") {
+      setPhase("reveal");
+    }
+  }, [isMobileViewport, phase]);
+
+  useEffect(() => {
+    if (phase !== "intro" || isMobileViewport) return;
     const hardTimeout = window.setTimeout(() => setPhase("reveal"), INTRO_MAX_WAIT_MS);
 
     const handleInteraction = () => {
@@ -27,13 +52,13 @@ export function Hero() {
       window.removeEventListener("pointerdown", handleInteraction);
       window.removeEventListener("keydown", handleInteraction);
     };
-  }, [phase]);
+  }, [phase, isMobileViewport]);
 
   useEffect(() => {
-    if (phase !== "intro" || !introStarted) return;
+    if (phase !== "intro" || !introStarted || isMobileViewport) return;
     const timer = window.setTimeout(() => setPhase("reveal"), INTRO_DURATION_MS);
     return () => clearTimeout(timer);
-  }, [phase, introStarted]);
+  }, [phase, introStarted, isMobileViewport]);
 
   return (
     <section id="home" className="relative min-h-screen bg-[#0a0a0a] overflow-hidden">
@@ -51,7 +76,7 @@ export function Hero() {
           }
         }
       `}</style>
-      {phase === "intro" ? (
+      {phase === "intro" && !isMobileViewport ? (
         <div
           className="fixed inset-0 z-[60] w-screen h-screen overflow-hidden"
           style={{ background: "linear-gradient(180deg, #0a0a0a 0%, #000000 100%)" }}

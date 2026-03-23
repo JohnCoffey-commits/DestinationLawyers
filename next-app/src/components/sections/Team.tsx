@@ -75,9 +75,21 @@ const getClipPath = (i: number) => {
   return `polygon(${topLeft} 0, 100% 0, ${bottomRight} 100%, 0 100%)`;
 };
 
+const mobileTeamOrder = [
+  "Samuel Li",
+  "Chloe He",
+  "Sophie Liu",
+  "Ken Hu",
+  "Jane Xiao",
+  "John Chan",
+] as const;
+
 export function Team() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const mobileMembers = mobileTeamOrder
+    .map((name) => teamMembers.find((member) => member.name === name))
+    .filter((member): member is (typeof teamMembers)[number] => Boolean(member));
 
   const handleCopyEmail = async (email: string) => {
     try {
@@ -114,9 +126,58 @@ export function Team() {
         </div>
       </div>
 
+      {/* Mobile: two rows, three members per row */}
+      <div className="md:hidden px-4 pb-10">
+        <div className="grid grid-cols-3 gap-2.5">
+          {mobileMembers.map((member) => (
+            <div key={member.name} className="overflow-hidden rounded-[10px] bg-[#111111]">
+              <div className="relative aspect-[3/4]">
+                <Image
+                  src={member.image}
+                  alt={member.name}
+                  fill
+                  sizes="33vw"
+                  className="object-cover object-top"
+                  style={{ filter: "brightness(0.9) saturate(0.9)" }}
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.28) 45%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0) 100%)",
+                  }}
+                />
+                <div className="absolute left-2 right-2 bottom-2">
+                  <p
+                    className="text-white leading-tight"
+                    style={{
+                      fontFamily: "var(--font-playfair), serif",
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    {member.name}
+                  </p>
+                  <p
+                    className="text-white/75 leading-tight"
+                    style={{
+                      marginTop: "0.15rem",
+                      fontSize: "0.62rem",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    {member.role}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Cards row */}
       <div
-        className="flex w-full px-2"
+        className="hidden md:flex w-full px-2"
         style={{ height: "clamp(480px, 65vh, 700px)" }}
       >
         {teamMembers.map((member, i) => {

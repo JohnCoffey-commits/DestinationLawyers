@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Quote, Star } from "lucide-react";
+import { Star } from "lucide-react";
 
 const testimonials = [
   { name: "Crispy Onion Pty Ltd", role: "Business Acquisition Client", text: "Destination Lawyers made our business acquisition smooth from due diligence to contract negotiations. Their advice was practical, tailored, and dependable at every step.", rating: 5 },
@@ -21,6 +21,7 @@ export function Testimonials() {
   const [current, setCurrent] = useState(0);
   const [leaving, setLeaving] = useState<number | null>(null);
   const isAnimating = useRef(false);
+  const touchStartXRef = useRef<number | null>(null);
 
   const goTo = useCallback((target: number) => {
     if (isAnimating.current || target === current) return;
@@ -34,6 +35,22 @@ export function Testimonials() {
   }, [current]);
 
   const next = () => goTo((current + 1) % testimonials.length);
+  const prev = () => goTo((current - 1 + testimonials.length) % testimonials.length);
+
+  const handleMobileTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    touchStartXRef.current = e.changedTouches[0]?.clientX ?? null;
+  };
+
+  const handleMobileTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartXRef.current === null) return;
+    const endX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
+    const deltaX = endX - touchStartXRef.current;
+    touchStartXRef.current = null;
+
+    if (Math.abs(deltaX) < 36) return;
+    if (deltaX < 0) next();
+    else prev();
+  };
 
   const getCardStyle = (index: number): React.CSSProperties => {
     const color = CARD_COLORS[index % CARD_COLORS.length];
@@ -98,40 +115,96 @@ export function Testimonials() {
           <div className="w-16 h-1 bg-[#c41e2a] mx-auto mt-6" />
         </div>
         <div className="max-w-4xl mx-auto">
-          {/* Card stack */}
-          <div
-            className="relative cursor-pointer select-none overflow-visible"
-            onClick={next}
-            style={{ height: "430px" }}
-          >
-            {testimonials.map((testimonial, index) => {
-              const color = getCardColor(index);
+          {/* Mobile: clean single-card layout */}
+          <div className="md:hidden">
+            {(() => {
+              const testimonial = testimonials[current];
+              const color = getCardColor(current);
               return (
                 <div
-                  key={index}
-                  className="rounded-xl shadow-2xl"
-                  style={getCardStyle(index)}
+                  className="rounded-2xl shadow-2xl p-6 select-none"
+                  style={{ backgroundColor: color.bg }}
+                  onClick={next}
+                  onTouchStart={handleMobileTouchStart}
+                  onTouchEnd={handleMobileTouchEnd}
                 >
-                  <div className="flex gap-1 mb-8 pt-4 justify-end">
+                  <div className="flex gap-1 mb-6 justify-end">
                     {Array.from({ length: testimonial.rating }).map((_, i) => (
-                      <Star key={i} size={18} style={{ color: color.star, fill: color.star }} />
+                      <Star key={i} size={17} style={{ color: color.star, fill: color.star }} />
                     ))}
                   </div>
-                  <p style={{ fontFamily: "var(--font-playfair), serif", fontSize: "clamp(1.2rem, 2.2vw, 1.5rem)", fontWeight: 500, lineHeight: 1.85, fontStyle: "italic", color: color.text, marginBottom: "2.5rem" }}>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-playfair), serif",
+                      fontSize: "clamp(1.05rem, 4.8vw, 1.45rem)",
+                      fontWeight: 500,
+                      lineHeight: 1.8,
+                      fontStyle: "italic",
+                      color: color.text,
+                      marginBottom: "2rem",
+                    }}
+                  >
                     "{testimonial.text}"
                   </p>
-                  <div className="flex items-center justify-end">
-                    <div>
-                      <h4 style={{ fontSize: "1.05rem", fontWeight: 600, color: color.text }}>{testimonial.name}</h4>
-                      <p style={{ fontSize: "0.875rem", color: color.sub }}>{testimonial.role}</p>
-                    </div>
+                  <div className="text-center">
+                    <h4 style={{ fontSize: "1.9rem", fontWeight: 700, color: color.text, lineHeight: 1.1 }}>{testimonial.name}</h4>
+                    <p style={{ fontSize: "0.9rem", color: color.sub, marginTop: "0.35rem" }}>{testimonial.role}</p>
                   </div>
                 </div>
               );
-            })}
+            })()}
+
+            <div className="mt-4 flex items-center justify-center gap-2.5">
+              {testimonials.map((_, i) => (
+                <button
+                  key={i}
+                  aria-label={`Go to testimonial ${i + 1}`}
+                  className="rounded-full transition-all duration-300"
+                  onClick={() => goTo(i)}
+                  style={{
+                    width: i === current ? "10px" : "7px",
+                    height: i === current ? "10px" : "7px",
+                    backgroundColor: i === current ? "#c41e2a" : "rgba(255,255,255,0.35)",
+                  }}
+                />
+              ))}
+            </div>
           </div>
-          {/* Dot indicators */}
-          
+
+          {/* Desktop: stacked cards */}
+          <div className="hidden md:block">
+            <div
+              className="relative cursor-pointer select-none overflow-visible"
+              onClick={next}
+              style={{ height: "430px" }}
+            >
+              {testimonials.map((testimonial, index) => {
+                const color = getCardColor(index);
+                return (
+                  <div
+                    key={index}
+                    className="rounded-xl shadow-2xl"
+                    style={getCardStyle(index)}
+                  >
+                    <div className="flex gap-1 mb-8 pt-4 justify-end">
+                      {Array.from({ length: testimonial.rating }).map((_, i) => (
+                        <Star key={i} size={18} style={{ color: color.star, fill: color.star }} />
+                      ))}
+                    </div>
+                    <p style={{ fontFamily: "var(--font-playfair), serif", fontSize: "clamp(1.2rem, 2.2vw, 1.5rem)", fontWeight: 500, lineHeight: 1.85, fontStyle: "italic", color: color.text, marginBottom: "2.5rem" }}>
+                      "{testimonial.text}"
+                    </p>
+                    <div className="flex items-center justify-end">
+                      <div>
+                        <h4 style={{ fontSize: "1.05rem", fontWeight: 600, color: color.text }}>{testimonial.name}</h4>
+                        <p style={{ fontSize: "0.875rem", color: color.sub }}>{testimonial.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -84,6 +84,8 @@ export function TimelineDial() {
     const [rippleKey, setRippleKey] = useState(0);
     const rippleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const moveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const touchStartXRef = useRef<number | null>(null);
+    const suppressNextClickRef = useRef(false);
 
     // ── Idle timer ─────────────────────────────────────────────────────────────
     const resetIdleTimer = useCallback(() => {
@@ -128,11 +130,35 @@ export function TimelineDial() {
     }, [isAnimating, resetIdleTimer]);
 
     const handleAreaClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (suppressNextClickRef.current) {
+            suppressNextClickRef.current = false;
+            return;
+        }
         const rect = e.currentTarget.getBoundingClientRect();
         if (e.clientX - rect.left < rect.width / 2) {
             goTo(currentIndex - 1);
         } else {
             goTo(currentIndex + 1);
+        }
+    }, [goTo, currentIndex]);
+
+    const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        touchStartXRef.current = e.changedTouches[0]?.clientX ?? null;
+    }, []);
+
+    const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (touchStartXRef.current === null) return;
+        const endX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
+        const deltaX = endX - touchStartXRef.current;
+        touchStartXRef.current = null;
+
+        if (Math.abs(deltaX) < 32) return;
+        suppressNextClickRef.current = true;
+
+        if (deltaX < 0) {
+            goTo(currentIndex + 1);
+        } else {
+            goTo(currentIndex - 1);
         }
     }, [goTo, currentIndex]);
 
@@ -228,6 +254,8 @@ export function TimelineDial() {
           .dial-inner-desc { display: none !important; }
           .dial-inner-content { bottom: 4% !important; }
           .dial-inner-title { font-size: 1.15rem !important; margin-bottom: 0 !important; }
+          .dial-year-active { font-size: clamp(2.05rem, 9.2vw, 2.7rem) !important; }
+          .dial-year-inactive { font-size: clamp(1.3rem, 6.2vw, 1.85rem) !important; }
         }
       `}</style>
 
@@ -254,11 +282,13 @@ export function TimelineDial() {
                     {/* 2:1 aspect ratio area */}
                     <div
                         className="relative w-full select-none"
-                        style={{ paddingTop: "50%", cursor: "pointer" }}
+                        style={{ paddingTop: "50%", cursor: "pointer", touchAction: "pan-y" }}
                         onClick={handleAreaClick}
                         onMouseMove={handleMouseMove}
                         onMouseEnter={() => setIsHovering(true)}
                         onMouseLeave={() => setIsHovering(false)}
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
                     >
 
                         {/* SVG layer */}
@@ -330,6 +360,7 @@ export function TimelineDial() {
                                 }}
                             >
                                 <span
+                                    className={item.isActive ? "dial-year-active" : "dial-year-inactive"}
                                     style={{
                                         fontFamily: "var(--font-playfair), serif",
                                         fontSize: item.isActive ? "clamp(2.8rem, 6.5vw, 5rem)" : "clamp(1.8rem, 3.2vw, 2.6rem)",
