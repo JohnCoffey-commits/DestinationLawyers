@@ -62,7 +62,7 @@ export function ScrollTransitionBanner() {
                     className="text-[#0a0a0a]"
                     style={{
                         fontFamily: "var(--font-playfair), serif",
-                        fontSize: "clamp(4.5rem, 12vw, 10rem)",
+                        fontSize: "clamp(3.95rem, 11.2vw, 10rem)",
                         fontWeight: 700,
                         lineHeight: 0.9,
                         letterSpacing: "-0.02em",

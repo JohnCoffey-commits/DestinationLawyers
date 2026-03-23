@@ -87,9 +87,12 @@ const mobileTeamOrder = [
 export function Team() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [activeMobileName, setActiveMobileName] = useState<string | null>(null);
   const mobileMembers = mobileTeamOrder
     .map((name) => teamMembers.find((member) => member.name === name))
     .filter((member): member is (typeof teamMembers)[number] => Boolean(member));
+  const activeMobileMember =
+    mobileMembers.find((member) => member.name === activeMobileName) ?? null;
 
   const handleCopyEmail = async (email: string) => {
     try {
@@ -130,7 +133,13 @@ export function Team() {
       <div className="md:hidden px-4 pb-10">
         <div className="grid grid-cols-3 gap-2.5">
           {mobileMembers.map((member) => (
-            <div key={member.name} className="overflow-hidden rounded-[10px] bg-[#111111]">
+            <button
+              key={member.name}
+              type="button"
+              onClick={() => setActiveMobileName(member.name)}
+              className="overflow-hidden rounded-[10px] bg-[#111111] text-left"
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
               <div className="relative aspect-[3/4]">
                 <Image
                   src={member.image}
@@ -170,8 +179,123 @@ export function Team() {
                   </p>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
+        </div>
+      </div>
+
+      {/* Mobile detail panel */}
+      <div
+        className="md:hidden fixed inset-0 z-[70] flex items-center justify-center px-4"
+        style={{ pointerEvents: activeMobileMember ? "auto" : "none" }}
+      >
+        <button
+          type="button"
+          aria-label="Close team details"
+          onClick={() => setActiveMobileName(null)}
+          className="absolute inset-0"
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+            opacity: activeMobileMember ? 1 : 0,
+            transition: "opacity 220ms ease",
+          }}
+        />
+
+        <div
+          className="relative w-full max-w-[420px] overflow-hidden rounded-2xl"
+          style={{
+            backgroundColor: "#0a0a0a",
+            opacity: activeMobileMember ? 1 : 0,
+            transform: activeMobileMember
+              ? "translateY(0) scale(1)"
+              : "translateY(14px) scale(0.95)",
+            transition:
+              "opacity 240ms ease, transform 360ms cubic-bezier(0.22, 1, 0.36, 1)",
+            boxShadow: "0 26px 80px rgba(0,0,0,0.55)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {activeMobileMember ? (
+            <>
+              <div className="relative h-[220px]">
+                <Image
+                  src={activeMobileMember.image}
+                  alt={activeMobileMember.name}
+                  fill
+                  sizes="90vw"
+                  className="object-cover object-top"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.45) 50%, rgba(10,10,10,0.12) 78%, rgba(10,10,10,0) 100%)",
+                  }}
+                />
+              </div>
+
+              <div className="px-5 pt-4 pb-5">
+                <h3
+                  className="text-white"
+                  style={{
+                    fontFamily: "var(--font-playfair), serif",
+                    fontSize: "1.65rem",
+                    fontWeight: 700,
+                    lineHeight: 1.08,
+                  }}
+                >
+                  {activeMobileMember.name}
+                </h3>
+                <p
+                  className="mt-1 text-[#c4956a]"
+                  style={{
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {activeMobileMember.role}
+                </p>
+                <p
+                  className="mt-3 text-white/70"
+                  style={{
+                    fontSize: "0.92rem",
+                    lineHeight: 1.75,
+                    fontStyle: "italic",
+                    fontFamily: "var(--font-playfair), serif",
+                  }}
+                >
+                  "{activeMobileMember.quote}"
+                </p>
+
+                <div className="mt-4 border-t border-white/10 pt-3 space-y-2.5">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2.5 text-white/75"
+                    style={{ fontSize: "0.84rem" }}
+                    onClick={() => handleCopyEmail(activeMobileMember.email)}
+                  >
+                    <Mail size={14} className="text-[#c4956a] flex-shrink-0" />
+                    <span className="truncate">{activeMobileMember.email}</span>
+                  </button>
+                  <a
+                    href={`tel:${activeMobileMember.phone}`}
+                    className="flex items-center gap-2.5 text-white/75"
+                    style={{ fontSize: "0.84rem" }}
+                  >
+                    <Phone size={14} className="text-[#c4956a] flex-shrink-0" />
+                    <span>{activeMobileMember.phone}</span>
+                  </a>
+                  {copiedEmail === activeMobileMember.email ? (
+                    <p className="text-[#c4a870]" style={{ fontSize: "0.72rem" }}>
+                      Copied {activeMobileMember.email}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 

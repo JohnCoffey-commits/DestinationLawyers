@@ -82,6 +82,7 @@ export function Specialities() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // ── Viewport gate (delay media work below the fold) ───────────────────────
   useEffect(() => {
@@ -154,6 +155,35 @@ export function Specialities() {
 
   const active = specialities[activeIndex];
 
+  const handleImageTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    },
+    []
+  );
+
+  const handleImageTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      const start = touchStartRef.current;
+      const touch = e.changedTouches[0];
+      touchStartRef.current = null;
+      if (!start || !touch) return;
+
+      const deltaX = touch.clientX - start.x;
+      const deltaY = touch.clientY - start.y;
+      if (Math.abs(deltaX) < 34 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+      if (deltaX < 0) {
+        goTo((activeIndex + 1) % TOTAL);
+      } else {
+        goTo((activeIndex - 1 + TOTAL) % TOTAL);
+      }
+    },
+    [activeIndex, goTo]
+  );
+
   return (
     <section id="specialities" ref={sectionRef} className="py-24 bg-[#f8f8f8]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -190,7 +220,10 @@ export function Specialities() {
                 style={{
                   aspectRatio: "1 / 1",
                   borderRadius: "8px",
+                  touchAction: "pan-y",
                 }}
+                onTouchStart={handleImageTouchStart}
+                onTouchEnd={handleImageTouchEnd}
               >
                 {specialities.map((item, i) => {
                   const shouldPreload =

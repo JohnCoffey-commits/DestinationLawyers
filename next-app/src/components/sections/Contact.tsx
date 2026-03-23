@@ -6,6 +6,7 @@ import { MapPin, Phone, Mail, Clock } from "lucide-react";
 export function Contact() {
   // State for email click-to-copy feedback
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [pressedCard, setPressedCard] = useState<string | null>(null);
   const timeoutRef = useRef<Required<ReturnType<typeof setTimeout>> | null>(null);
 
   const handleCopyEmail = async (email: string) => {
@@ -34,6 +35,13 @@ export function Contact() {
       }
     };
   }, []);
+
+  const pulseCard = (cardId: string) => {
+    setPressedCard(cardId);
+    window.setTimeout(() => {
+      setPressedCard((prev) => (prev === cardId ? null : prev));
+    }, 180);
+  };
 
   return (
     <section id="contact" className="bg-[#e8ddd0]">
@@ -79,7 +87,136 @@ export function Contact() {
 
       {/* ── Contact cards ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:pb-24">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Mobile: 2x2 cards */}
+        <div className="md:hidden grid grid-cols-2 gap-3">
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=4%2F174+Willoughby+Road%2C+Crows+Nest%2C+NSW%2C+2065"
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => pulseCard("address")}
+            className="rounded-xl border border-[#d4cabd] bg-[#e8ddd0] p-4 text-[#2a2218] transition-transform duration-200"
+            style={{
+              transform: pressedCard === "address" ? "scale(0.97)" : "scale(1)",
+              boxShadow:
+                pressedCard === "address"
+                  ? "0 8px 22px rgba(0,0,0,0.09)"
+                  : "none",
+            }}
+          >
+            <MapPin size={16} className="text-[#c41e2a]" />
+            <p
+              className="mt-3 uppercase text-[#0a0a0a]"
+              style={{ fontSize: "0.63rem", letterSpacing: "0.11em", fontWeight: 700 }}
+            >
+              Address
+            </p>
+            <p style={{ marginTop: "0.45rem", fontSize: "0.8rem", lineHeight: 1.5 }}>
+              4/174 Willoughby Road, Crows Nest, NSW, 2065
+            </p>
+          </a>
+
+          <a
+            href="tel:0208041213"
+            onClick={() => pulseCard("phone")}
+            className="rounded-xl border border-[#d4cabd] bg-[#e8ddd0] p-4 text-[#2a2218] transition-transform duration-200"
+            style={{
+              transform: pressedCard === "phone" ? "scale(0.97)" : "scale(1)",
+              boxShadow:
+                pressedCard === "phone"
+                  ? "0 8px 22px rgba(0,0,0,0.09)"
+                  : "none",
+            }}
+          >
+            <Phone size={16} className="text-[#c41e2a]" />
+            <p
+              className="mt-3 uppercase text-[#0a0a0a]"
+              style={{ fontSize: "0.63rem", letterSpacing: "0.11em", fontWeight: 700 }}
+            >
+              Phone
+            </p>
+            <p style={{ marginTop: "0.45rem", fontSize: "0.95rem", lineHeight: 1.5 }}>
+              02 0804 1213
+            </p>
+          </a>
+
+          <div
+            className="rounded-xl border border-[#d4cabd] bg-[#e8ddd0] p-4 text-[#2a2218] transition-transform duration-200"
+            style={{
+              transform: pressedCard === "email" ? "scale(0.97)" : "scale(1)",
+              boxShadow:
+                pressedCard === "email"
+                  ? "0 8px 22px rgba(0,0,0,0.09)"
+                  : "none",
+            }}
+          >
+            <Mail size={16} className="text-[#c41e2a]" />
+            <p
+              className="mt-3 uppercase text-[#0a0a0a]"
+              style={{ fontSize: "0.63rem", letterSpacing: "0.11em", fontWeight: 700 }}
+            >
+              Email
+            </p>
+            <div className="mt-2 flex flex-col items-start">
+              <button
+                type="button"
+                onClick={() => {
+                  pulseCard("email");
+                  void handleCopyEmail("info@destinationlawyers.com");
+                }}
+                className="text-left text-[#2a2218]"
+                style={{ fontSize: "0.8rem", lineHeight: 1.5 }}
+              >
+                info@destinationlawyers.com
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  pulseCard("email");
+                  void handleCopyEmail("chloe.he@destlawyers.com.au");
+                }}
+                className="mt-1 text-left text-[#2a2218]"
+                style={{ fontSize: "0.8rem", lineHeight: 1.5 }}
+              >
+                chloe.he@destlawyers.com.au
+              </button>
+              {copiedEmail ? (
+                <span className="mt-2 text-[#0a0a0a]" style={{ fontSize: "0.7rem" }}>
+                  Copied {copiedEmail}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => pulseCard("hours")}
+            className="rounded-xl border border-[#d4cabd] bg-[#e8ddd0] p-4 text-left text-[#2a2218] transition-transform duration-200"
+            style={{
+              transform: pressedCard === "hours" ? "scale(0.97)" : "scale(1)",
+              boxShadow:
+                pressedCard === "hours"
+                  ? "0 8px 22px rgba(0,0,0,0.09)"
+                  : "none",
+            }}
+          >
+            <Clock size={16} className="text-[#c41e2a]" />
+            <p
+              className="mt-3 uppercase text-[#0a0a0a]"
+              style={{ fontSize: "0.63rem", letterSpacing: "0.11em", fontWeight: 700 }}
+            >
+              Hours
+            </p>
+            <p style={{ marginTop: "0.45rem", fontSize: "0.8rem", lineHeight: 1.5 }}>
+              Mon - Fri
+              <br />
+              9:00 AM - 6:00 PM
+              <br />
+              Sat: 10:00 AM - 2:00 PM
+            </p>
+          </button>
+        </div>
+
+        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6">
 
           {/* 1. Address Card */}
           <div className="bg-[#e8ddd0] hover:bg-[#0a0a0a] rounded-2xl transition-all duration-300 ease-out hover:shadow-[0_18px_60px_rgba(0,0,0,0.18)] px-8 py-10 flex flex-col gap-5 group">
