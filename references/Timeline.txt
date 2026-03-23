@@ -1,0 +1,426 @@
+TIMELINE Dial 组件迁移文档
+1. 环境要求
+项目	要求
+框架	React 18+ with TypeScript
+样式	Tailwind CSS v4（少量工具类）
+字体	Playfair Display（year labels + title），系统 sans-serif（body text）
+外部依赖	无 — 纯 React + 内联样式 + SVG，零第三方包
+字体引入（如用 Google Fonts，加入 <head> 或全局 CSS）：
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+2. 完整组件代码
+将以下内容保存为 History.tsx（或根据项目命名习惯重命名）：
+
+import { useState, useCallback, useRef, useEffect } from "react";
+
+// ─── 数据 ────────────────────────────────────────────────────────────────────
+// 替换为你自己的里程碑数据，结构固定：{ year: number, title: string, description: string }
+const milestones = [
+  { year: 2001, title: "Destination Lawyers Founded", description: "Established by a group of visionary attorneys committed to providing world-class legal services. The firm opened its first office with a team of five dedicated lawyers." },
+  { year: 2005, title: "Expanded to Corporate Law", description: "Recognizing growing demand, the firm launched a dedicated corporate and commercial law division, quickly becoming a trusted advisor for mergers and acquisitions." },
+  { year: 2010, title: "International Practice Opened", description: "Destination Lawyers expanded its reach with an international law practice, serving clients across borders in immigration, trade, and cross-border disputes." },
+  { year: 2015, title: "Award-Winning Excellence", description: "The firm received its first national recognition award for outstanding legal practice, cementing its reputation as one of the region's premier law firms." },
+  { year: 2019, title: "Innovation & Technology Division", description: "Launched a specialized intellectual property and technology law division, helping startups and enterprises protect their innovations in the digital age." },
+  { year: 2023, title: "New Headquarters Unveiled", description: "Opened a state-of-the-art headquarters designed to foster collaboration and provide clients with a premium experience. The firm now employs over 80 legal professionals." },
+  { year: 2026, title: "25 Years of Legal Excellence", description: "Celebrating a quarter-century of dedicated service, Destination Lawyers continues to set the standard for integrity, expertise, and client-focused legal representation." },
+];
+
+// ─── 拨盘几何常量 ─────────────────────────────────────────────────────────────
+// SVG viewBox = "0 0 1000 500"，圆心固定在 (500, 500)（即底部中心）
+// 半圆从左端扫到右端，角度从 0（右）到 π（左），步进 = π / (N-1)
+const N = milestones.length;           // 里程碑总数
+const STEP = Math.PI / (N - 1);       // 相邻里程碑之间的弧度间隔
+const OUTER_R = 450;                   // 外弧半径（SVG 单位）
+const INNER_R = 282;                   // 内弧半径（SVG 单位，仅用于参考，未直接渲染）
+const LABEL_R = 362;                   // 年份标签所在圆弧半径
+
+export function History() {
+  // ── 状态 ──────────────────────────────────────────────────────────────────
+  const [currentIndex, setCurrentIndex] = useState(0);      // 当前激活里程碑索引
+  const [isAnimating, setIsAnimating] = useState(false);    // 防抖：旋转动画期间锁定输入
+  const [isIdle, setIsIdle] = useState(false);              // 用户静止 5s 后置 true，触发 sway 动画
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 鼠标涟漪相关状态
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null); // 百分比坐标
+  const [isHovering, setIsHovering] = useState(false);       // 鼠标是否在模块内
+  const [isMouseStopped, setIsMouseStopped] = useState(false); // 鼠标静止 400ms 后置 true
+  const [rippleKey, setRippleKey] = useState(0);             // 递增 key，强制重新挂载涟漪 DOM
+  const rippleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const moveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── 空闲计时器 ────────────────────────────────────────────────────────────
+  // 任何交互都会重置；5000ms 无交互后 isIdle = true
+  const resetIdleTimer = useCallback(() => {
+    setIsIdle(false);
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => setIsIdle(true), 5000);
+  }, []);
+
+  useEffect(() => {
+    resetIdleTimer();
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [resetIdleTimer]);
+
+  // ── 涟漪循环：idle + hovering + mouse stopped 三条件同时满足时启动 ─────────
+  // 每隔 3400ms 重新触发一次（通过递增 key 强制重新挂载 DOM → 重播 CSS animation）
+  useEffect(() => {
+    if (isIdle && isHovering && isMouseStopped) {
+      setRippleKey(k => k + 1);                               // 立即触发第一次
+      rippleIntervalRef.current = setInterval(() => {
+        setRippleKey(k => k + 1);
+      }, 3400);
+    } else {
+      if (rippleIntervalRef.current) {
+        clearInterval(rippleIntervalRef.current);
+        rippleIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (rippleIntervalRef.current) clearInterval(rippleIntervalRef.current);
+    };
+  }, [isIdle, isHovering, isMouseStopped]);
+
+  // ── 导航 ──────────────────────────────────────────────────────────────────
+  // goTo 支持环绕（wrap-around），动画期间 isAnimating=true 阻止重复触发
+  const goTo = useCallback((idx: number) => {
+    if (isAnimating) return;
+    const w = ((idx % N) + N) % N;
+    setIsAnimating(true);
+    setCurrentIndex(w);
+    resetIdleTimer();
+    setTimeout(() => setIsAnimating(false), 600);   // 与 CSS transition 时长对齐
+  }, [isAnimating, resetIdleTimer]);
+
+  // 点击左半区 → 上一个，右半区 → 下一个
+  const handleAreaClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (e.clientX - rect.left < rect.width / 2) {
+      goTo(currentIndex - 1);
+    } else {
+      goTo(currentIndex + 1);
+    }
+  }, [goTo, currentIndex]);
+
+  // 鼠标移动：更新坐标 + 重置"停止"计时器
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    });
+    setIsMouseStopped(false);
+    if (moveTimerRef.current) clearTimeout(moveTimerRef.current);
+    moveTimerRef.current = setTimeout(() => setIsMouseStopped(true), 400);
+  }, []);
+
+  // ── 拨盘几何计算 ──────────────────────────────────────────────────────────
+  // rotOffset：使激活里程碑始终出现在顶部（angle = π/2）
+  // rotDeg：将 rotOffset 转换为 CSS rotate() 度数，传给 SVG 旋转组
+  const rotOffset = Math.PI / 2 - currentIndex * STEP;
+  const rotDeg = (rotOffset * 180) / Math.PI;
+
+  // yearLabels：为每个里程碑计算 CSS 百分比定位 + 透明度
+  // 坐标系：SVG viewBox 1000×500，圆心 (500, 500)
+  //   cssLeft = (500 - LABEL_R * cos(angle)) / 10   → 百分比（相对于容器宽度）
+  //   cssTop  = (500 - LABEL_R * sin(angle)) / 5    → 百分比（相对于容器高度，即宽度的50%）
+  // opacity：距顶部越远越透明；sin(angle) < -0.08 的标签完全隐藏（已旋入底部）
+  const yearLabels = milestones.map((m, i) => {
+    const angle = i * STEP + rotOffset;
+    const sinA = Math.sin(angle);
+    const cosA = Math.cos(angle);
+    const cssLeft = (500 - LABEL_R * cosA) / 10;
+    const cssTop  = (500 - LABEL_R * sinA) / 5;
+    const visible = sinA > -0.08;
+    const distFromTop = Math.abs(angle - Math.PI / 2);
+    const opacity = visible ? Math.max(0, 1 - distFromTop / (Math.PI * 0.6)) : 0;
+    return { ...m, index: i, isActive: i === currentIndex, cssLeft, cssTop, opacity };
+  });
+
+  // ── 渲染 ──────────────────────────────────────────────────────────────────
+  return (
+    <section id="about" className="relative overflow-hidden" style={{ backgroundColor: "#e8e4dc" }}>
+      {/* ── CSS 动画定义（内联，无需外部样式表）── */}
+      <style>{`
+        /* 空闲时拨盘轻微左右摇摆 */
+        @keyframes dialSway {
+          0%   { transform: rotate(0deg);    animation-timing-function: ease-in-out; }
+          12%  { transform: rotate(1.0deg);  animation-timing-function: ease-in-out; }
+          24%  { transform: rotate(-1.0deg); animation-timing-function: ease-in-out; }
+          36%  { transform: rotate(1.0deg);  animation-timing-function: ease-in-out; }
+          48%  { transform: rotate(-1.0deg); animation-timing-function: ease-in-out; }
+          58%  { transform: rotate(0.7deg);  animation-timing-function: ease-out; }
+          100% { transform: rotate(0deg); }
+        }
+        /* 外层涟漪：从 scale(0) 扩散到 scale(3.8)，共 2.8s */
+        @keyframes cursorRipple {
+          0%   { transform: translate(-50%,-50%) scale(0);   opacity: 0; }
+          20%  { opacity: 0.38; }
+          100% { transform: translate(-50%,-50%) scale(3.8); opacity: 0; }
+        }
+        /* 中层涟漪：延迟 0.35s，略小 */
+        @keyframes cursorRippleMid {
+          0%   { transform: translate(-50%,-50%) scale(0);   opacity: 0; }
+          20%  { opacity: 0.25; }
+          100% { transform: translate(-50%,-50%) scale(3.0); opacity: 0; }
+        }
+        /* 内层圆点：持续呼吸脉冲，循环播放 */
+        @keyframes cursorRippleInner {
+          0%, 100% { transform: translate(-50%,-50%) scale(1);    opacity: 0.9; }
+          50%       { transform: translate(-50%,-50%) scale(1.35); opacity: 0.35; }
+        }
+      `}</style>
+
+      {/* ── TIMELINE 顶部标签 ── */}
+      <div className="text-center pt-10 pb-4">
+        <span
+          className="tracking-[0.3em] uppercase"
+          style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(0,0,0,0.55)" }}
+        >
+          Timeline
+        </span>
+      </div>
+
+      {/* ── 主容器：圆角边框 + overflow hidden ── */}
+      <div className="relative mx-auto" style={{ maxWidth: "none", padding: "0 10px" }}>
+        <div
+          className="relative w-full"
+          style={{
+            border: "1px solid rgba(196, 30, 42, 0.45)",  // 品牌红色边框
+            borderRadius: "24px",
+            overflow: "hidden",
+          }}
+        >
+          {/* ── 2:1 宽高比区域（paddingTop: 50% 技巧）── */}
+          {/* 点击整区域切换；左半区 = 上一个，右半区 = 下一个 */}
+          <div
+            className="relative w-full select-none"
+            style={{ paddingTop: "50%", cursor: "pointer" }}
+            onClick={handleAreaClick}
+            onMouseMove={handleMouseMove}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+          >
+
+            {/* ── SVG 层：两条弧线 + 旋转刻度组 ── */}
+            <svg
+              viewBox="0 0 1000 500"
+              className="absolute inset-0 w-full h-full"
+              preserveAspectRatio="xMidYMax meet"
+              style={{ pointerEvents: "none" }}
+            >
+              {/* 外弧：半径 450，从 (50,500) 到 (950,500) */}
+              <path
+                d={`M 50 500 A ${OUTER_R} ${OUTER_R} 0 0 1 950 500`}
+                fill="none"
+                stroke="#8b0000"
+                strokeWidth="3"
+                opacity="0.9"
+              />
+              {/* 内弧：半径 410 */}
+              <path
+                d={`M 90 500 A 410 410 0 0 1 910 500`}
+                fill="none"
+                stroke="#8b0000"
+                strokeWidth="1"
+                opacity="0.75"
+              />
+
+              {/* 空闲摇摆包裹层（仅在 isIdle=true 时播放 dialSway）*/}
+              <g style={{ transformOrigin: "500px 500px", animation: isIdle ? "dialSway 5s ease-in-out infinite" : "none" }}>
+                {/* 旋转组：CSS transition 600ms spring，与 goTo 锁定时长对齐 */}
+                <g
+                  style={{
+                    transform: `rotate(${rotDeg}deg)`,
+                    transformOrigin: "500px 500px",
+                    transition: "transform 600ms cubic-bezier(0.22, 1, 0.36, 1)",
+                  }}
+                >
+                  {/* 主刻度（每个里程碑一根，从内弧边缘到外弧）*/}
+                  {milestones.map((_, i) => {
+                    const a = i * STEP;
+                    const x1 = 500 - 412 * Math.cos(a);
+                    const y1 = 500 - 412 * Math.sin(a);
+                    const x2 = 500 - OUTER_R * Math.cos(a);
+                    const y2 = 500 - OUTER_R * Math.sin(a);
+                    return (
+                      <line key={`major-${i}`} x1={x1} y1={y1} x2={x2} y2={y2}
+                        stroke="#8b0000" strokeWidth="1" opacity="0.85" />
+                    );
+                  })}
+                  {/* 次刻度（每间隔 6 根，均分）*/}
+                  {milestones.slice(0, -1).map((_, i) =>
+                    [1/7, 2/7, 3/7, 4/7, 5/7, 6/7].map((frac) => {
+                      const a = (i + frac) * STEP;
+                      const x1 = 500 - 432 * Math.cos(a);
+                      const y1 = 500 - 432 * Math.sin(a);
+                      const x2 = 500 - OUTER_R * Math.cos(a);
+                      const y2 = 500 - OUTER_R * Math.sin(a);
+                      return (
+                        <line key={`minor-${i}-${frac}`} x1={x1} y1={y1} x2={x2} y2={y2}
+                          stroke="#8b0000" strokeWidth="0.6" opacity="0.6" />
+                      );
+                    })
+                  )}
+                </g>
+              </g>
+            </svg>
+
+            {/* ── 年份标签层（absolute 定位，浮于 SVG 之上）── */}
+            {/* 每帧重新计算 cssLeft/cssTop；CSS transition 使其平滑移动 */}
+            {yearLabels.map((item) => (
+              <div
+                key={`${item.year}-${item.index}`}
+                className="absolute"
+                style={{
+                  left: `${item.cssLeft}%`,
+                  top: `${item.cssTop}%`,
+                  transform: "translate(-50%, -50%)",
+                  transition: "left 600ms cubic-bezier(0.22,1,0.36,1), top 600ms cubic-bezier(0.22,1,0.36,1), opacity 400ms ease",
+                  zIndex: item.isActive ? 20 : 5,
+                  opacity: item.opacity,           // 0~1，距顶部越远越透明
+                  pointerEvents: item.opacity > 0.1 ? "auto" : "none",
+                  cursor: item.isActive ? "default" : "pointer",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!item.isActive) goTo(item.index);
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: item.isActive ? "clamp(2.8rem, 6.5vw, 5rem)" : "clamp(1.8rem, 3.2vw, 2.6rem)",
+                    fontWeight: item.isActive ? 700 : 400,
+                    color: item.isActive ? "#0a0a0a" : "rgba(0,0,0,0.40)",
+                    transition: "font-size 500ms cubic-bezier(0.22,1,0.36,1), color 400ms ease",
+                    whiteSpace: "nowrap",
+                    display: "block",
+                    textAlign: "center",
+                    letterSpacing: item.isActive ? "0.04em" : "0",
+                  }}
+                >
+                  {item.year}
+                </span>
+              </div>
+            ))}
+
+            {/* ── 事件标题 + 描述（底部中央，固定 bottom 定位）── */}
+            <div
+              className="absolute left-0 right-0 text-center px-8"
+              style={{ bottom: "11%", zIndex: 10, pointerEvents: "none" }}
+            >
+              <h3
+                className="mb-3"
+                style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: "clamp(1.35rem, 2.4vw, 1.9rem)",
+                  fontWeight: 700,
+                  color: "#0a0a0a",
+                  transition: "opacity 300ms ease",
+                }}
+              >
+                {milestones[currentIndex].title}
+              </h3>
+              <p
+                className="mx-auto"
+                style={{
+                  maxWidth: "500px",
+                  fontSize: "clamp(0.92rem, 1.35vw, 1.1rem)",
+                  lineHeight: 1.85,
+                  color: "rgba(0,0,0,0.62)",
+                }}
+              >
+                {milestones[currentIndex].description}
+              </p>
+            </div>
+
+            {/* ── 进度条（底部居中，当前索引 / 总数）── */}
+            <div
+              className="absolute left-0 right-0 flex items-center justify-center"
+              style={{ bottom: "2.5%", zIndex: 10, pointerEvents: "none" }}
+            >
+              <div className="relative" style={{ width: "160px", height: "2px", backgroundColor: "rgba(0,0,0,0.15)" }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0, top: 0, height: "100%",
+                    width: `${(currentIndex / (milestones.length - 1)) * 100}%`,
+                    backgroundColor: "#c41e2a",
+                    transition: "width 600ms cubic-bezier(0.22, 1, 0.36, 1)",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* ── 鼠标涟漪提示（仅在 idle + hovering + 鼠标停止 时渲染）── */}
+            {/* key={rippleKey} 每次递增强制重新挂载，从而重播 animation */}
+            {isIdle && isHovering && isMouseStopped && mousePos && (
+              <div
+                key={rippleKey}
+                className="absolute"
+                style={{ left: `${mousePos.x}%`, top: `${mousePos.y}%`, pointerEvents: "none", zIndex: 50 }}
+              >
+                {/* 外层扩散圆（2.8s，从 scale 0 → 3.8，fill-mode: both 防止初始闪烁）*/}
+                <div style={{
+                  position: "absolute", width: "48px", height: "48px", borderRadius: "50%",
+                  backgroundColor: "#c41e2a",
+                  transform: "translate(-50%,-50%) scale(0)", opacity: 0,
+                  animation: "cursorRipple 2.8s cubic-bezier(0.2, 0.6, 0.4, 1) both",
+                }} />
+                {/* 中层扩散圆（延迟 0.35s）*/}
+                <div style={{
+                  position: "absolute", width: "32px", height: "32px", borderRadius: "50%",
+                  backgroundColor: "#c41e2a",
+                  transform: "translate(-50%,-50%) scale(0)", opacity: 0,
+                  animation: "cursorRippleMid 2.8s cubic-bezier(0.2, 0.6, 0.4, 1) 0.35s both",
+                }} />
+                {/* 内层呼吸点（无限循环）*/}
+                <div style={{
+                  position: "absolute", width: "10px", height: "10px", borderRadius: "50%",
+                  backgroundColor: "#c41e2a",
+                  transform: "translate(-50%,-50%)",
+                  animation: "cursorRippleInner 2s ease-in-out infinite",
+                }} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 底部间距 */}
+      <div style={{ height: "48px" }} />
+    </section>
+  );
+}
+3. 使用方式
+// 在任意父组件中直接引用
+import { History } from "./History";
+
+export default function App() {
+  return (
+    <main>
+      <History />
+    </main>
+  );
+}
+<section> 带有 id="about"，如果项目中有锚点导航，链接到 #about 即可。如需改名，修改该属性。
+
+4. 调色板（可定制化替换）
+用途	颜色值
+区块背景	#e8e4dc（浅卡其暖灰）
+弧线 / 刻度	#8b0000（深红）
+边框	rgba(196, 30, 42, 0.45)（品牌红半透明）
+进度条填充 / 涟漪	#c41e2a（品牌红）
+激活年份文字	#0a0a0a
+非激活年份文字	rgba(0,0,0,0.40)
+标题文字	#0a0a0a
+描述文字	rgba(0,0,0,0.62)
+5. 关键行为说明（给接收 AI 的补充）
+拨盘旋转逻辑：rotOffset = π/2 − currentIndex × STEP，保证激活项始终在弧顶（12点方向）。SVG <g> 的 rotate(rotDeg) 配合 600ms spring transition 实现平滑旋转。
+标签定位：标签是 HTML <div>（非 SVG text），通过 cssLeft/cssTop 百分比定位浮在 SVG 上方，旋转时用 CSS transition 跟随，不是 SVG transform，避免字体渲染问题。
+涟漪触发条件：必须同时满足①用户 5s 无操作、②鼠标在模块内、③鼠标停止移动 400ms，三个条件缺一不可。key={rippleKey} 递增是重播 CSS animation 的标准技巧（强制重新挂载 DOM 节点）。
+防抖：isAnimating 在 goTo 调用时置 true，600ms 后清除，期间忽略所有新的 goTo 调用，防止快速点击导致动画错乱。
+Tailwind 依赖极少：relative, absolute, overflow-hidden, w-full, mx-auto, text-center, select-none, flex, items-center, justify-center, px-8, mb-3 等基础类。如目标项目不用 Tailwind，全部替换为等价内联样式即可

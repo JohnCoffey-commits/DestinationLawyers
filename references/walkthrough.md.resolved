@@ -1,0 +1,246 @@
+# Stats Count-Up Section — Full Extraction
+
+---
+
+## 1. Tech Summary
+
+| Aspect | Detail |
+|---|---|
+| **Framework** | Next.js (App Router) with React 18+ |
+| **Language** | TypeScript (TSX) |
+| **Styling** | Tailwind CSS **v4** (using `@theme` block in CSS, *no* `tailwind.config.*` file) |
+| **Animation library** | **`framer-motion ^12.29.0`** — only `useInView` is used (scroll-triggered visibility detection) |
+| **Count-up logic** | Custom [useCountUp](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx#7-37) hook using `requestAnimationFrame` — *no* third-party count-up library |
+| **Scroll detection** | `useInView` from `framer-motion` with `{ once: true, margin: "-100px" }` (fires once, 100 px before section enters viewport) |
+
+---
+
+## 2. File Map
+
+| File | Purpose |
+|---|---|
+| [page.tsx](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/app/page.tsx) | Home page — mounts `<StatsSection />` between `<CoursesSection />` and `<CarouselSection />` |
+| [StatsSection.tsx](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx) | **Main file** — contains [useCountUp](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx#7-37) hook, [StatItem](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx#38-52) component, and [StatsSection](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx#53-67) export |
+| [Container.tsx](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/ui/Container.tsx) | Centered max-width wrapper (`max-w-7xl`, responsive padding) |
+| [utils.ts](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/lib/utils.ts) | [cn()](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/lib/utils.ts#4-7) helper (used by Container) — wraps `clsx` + `tailwind-merge` |
+| [globals.css](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/app/globals.css) | Tailwind `@theme` block defining `--font-display`, `--color-primary-400`, etc. |
+
+### Mount hierarchy
+
+```
+Home (page.tsx)
+  └─ <StatsSection />
+       └─ <Container>              ← max-w-7xl centered wrapper
+            └─ grid (2-col mobile / 4-col desktop)
+                 ├─ <StatItem value={700} label="Current Enrollments" color="teal"   />
+                 ├─ <StatItem value={150} label="Qualified Staff"     color="green"  />
+                 ├─ <StatItem value={30}  label="Courses"             color="pink"   />
+                 └─ <StatItem value={20}  label="Campuses"            color="peach"  />
+```
+
+---
+
+## 3. Complete Code
+
+### 3A. [StatsSection.tsx](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx) — *the only file you truly need*
+
+```tsx
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useInView } from "framer-motion";
+import { Container } from "@/components/ui/Container";
+
+// ─── Custom hook: counts from 0 → end over `duration` ms, triggered once on scroll ───
+const useCountUp = (end: number, duration: number = 2000) => {
+    const [count, setCount] = useState(0);
+    const nodeRef = useRef(null);
+    const isInView = useInView(nodeRef, { once: true, margin: "-100px" });
+
+    useEffect(() => {
+        if (!isInView) return;
+
+        let startTime: number;
+        let animationFrame: number;
+
+        const step = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+
+            setCount(Math.floor(progress * end));
+
+            if (progress < 1) {
+                animationFrame = requestAnimationFrame(step);
+            }
+        };
+
+        animationFrame = requestAnimationFrame(step);
+
+        return () => cancelAnimationFrame(animationFrame);
+    }, [end, duration, isInView]);
+
+    return { count, ref: nodeRef };
+};
+
+// ─── Single stat card ───
+const StatItem = ({
+    value,
+    label,
+    colorClass,
+    suffix = "+",
+}: {
+    value: number;
+    label: string;
+    colorClass: string;
+    suffix?: string;
+}) => {
+    const { count, ref } = useCountUp(value);
+
+    return (
+        <div ref={ref} className="text-center">
+            <div
+                className={`font-display font-bold text-5xl md:text-6xl mb-2 ${colorClass}`}
+            >
+                {count}{suffix}
+            </div>
+            <div className="text-sm md:text-base font-bold text-primary-400 uppercase tracking-widest">
+                {label}
+            </div>
+        </div>
+    );
+};
+
+// ─── Exported section ───
+export function StatsSection() {
+    return (
+        <section className="py-20 bg-white">
+            <Container>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-8">
+                    <StatItem value={700} label="Current Enrollments" colorClass="text-[#4AABAA]" />
+                    <StatItem value={150} label="Qualified Staff"     colorClass="text-[#7BAB54]" />
+                    <StatItem value={30}  label="Courses"             colorClass="text-[#C92F6B]" />
+                    <StatItem value={20}  label="Campuses"            colorClass="text-[#EFC59C]" />
+                </div>
+            </Container>
+        </section>
+    );
+}
+```
+
+### 3B. [Container.tsx](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/ui/Container.tsx) — layout wrapper
+
+```tsx
+import { cn } from "@/lib/utils";
+
+interface ContainerProps {
+    children: React.ReactNode;
+    className?: string;
+}
+
+export function Container({ children, className }: ContainerProps) {
+    return (
+        <div className={cn("mx-auto max-w-7xl px-4 sm:px-6 lg:px-8", className)}>
+            {children}
+        </div>
+    );
+}
+```
+
+### 3C. [utils.ts](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/lib/utils.ts) — [cn](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/lib/utils.ts#4-7) helper
+
+```ts
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
+```
+
+### 3D. Required theme tokens (from [globals.css](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/app/globals.css))
+
+Only these tokens are referenced by the stats section:
+
+```css
+@theme {
+  --color-primary-400: #829ab1;   /* label text color */
+  --font-display: Arial, sans-serif; /* number font family */
+  --font-sans: Arial, sans-serif;
+}
+```
+
+> [!TIP]
+> The four stat *number* colors (`#4AABAA`, `#7BAB54`, `#C92F6B`, `#EFC59C`) are inline arbitrary values — they do **not** depend on any theme token.
+
+### 3E. Data structure reference
+
+```ts
+const STATS = [
+  { value: 700, label: "Current Enrollments", colorClass: "text-[#4AABAA]" }, // teal
+  { value: 150, label: "Qualified Staff",     colorClass: "text-[#7BAB54]" }, // green
+  { value: 30,  label: "Courses",             colorClass: "text-[#C92F6B]" }, // pink
+  { value: 20,  label: "Campuses",            colorClass: "text-[#EFC59C]" }, // peach
+];
+```
+
+---
+
+## 4. Porting Checklist
+
+### Install dependencies
+
+```bash
+npm install framer-motion clsx tailwind-merge
+```
+
+### Files to copy
+
+- [ ] [StatsSection.tsx](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx) → your components directory
+- [ ] [Container.tsx](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/ui/Container.tsx) → your UI components directory (or replace `<Container>` with your own max-width wrapper)
+- [ ] [utils.ts](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/lib/utils.ts) → your lib directory (or replace [cn()](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/lib/utils.ts#4-7) with `clsx` directly if you don't use `tailwind-merge`)
+
+### Theme tokens to add
+
+Add to your CSS / Tailwind config:
+
+| Token | Value | Used for |
+|---|---|---|
+| `--color-primary-400` | `#829ab1` | Label text color (`text-primary-400`) |
+| `--font-display` | `Arial, sans-serif` | Number font family (`font-display`) |
+
+Or replace these Tailwind classes with your own equivalents:
+- `text-primary-400` → any muted grey for labels
+- `font-display` → any display/heading font family
+
+### Customizing
+
+| What | Where to change |
+|---|---|
+| **Stat values** | `value` prop on each `<StatItem>` |
+| **Labels** | `label` prop  |
+| **Number colors** | `colorClass` prop (Tailwind arbitrary: `text-[#HEX]`) |
+| **Suffix** | `suffix` prop (defaults to `"+"`) |
+| **Count-up duration** | Second arg to [useCountUp()](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx#7-37) (default `2000` ms) |
+| **Trigger offset** | `margin` in `useInView` options (default `"-100px"`) |
+| **Easing** | Currently linear; add an easing function to the `progress` calculation in [useCountUp](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx#7-37) |
+| **Section background** | `bg-white` on the `<section>` |
+| **Section padding** | `py-20` on the `<section>` |
+
+### Where to place in your Home page
+
+```tsx
+import { StatsSection } from "@/components/home/StatsSection";
+
+export default function Home() {
+  return (
+    <>
+      {/* … sections above … */}
+      <StatsSection />
+      {/* … sections below … */}
+    </>
+  );
+}
+```
+
+> [!IMPORTANT]
+> [StatsSection.tsx](file:///Users/zhengpeixian/ZPX/Work/KEA/KE_Academy/ke-academy-next/src/components/home/StatsSection.tsx) uses `"use client"` because it relies on `useState`, `useEffect`, and `useInView` — all client-side APIs. Make sure your target project supports React client components.

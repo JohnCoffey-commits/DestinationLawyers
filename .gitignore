@@ -1,0 +1,17 @@
+node_modules
+.DS_Store
+**/.DS_Store
+
+# Next.js (next-app/)
+next-app/node_modules
+next-app/.next
+next-app/out
+next-app/.vercel
+next-app/*.tsbuildinfo
+next-app/next-env.d.ts
+
+# Secrets
+.env
+.env.local
+next-app/.env
+next-app/.env.local
