@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
+import { getSiteUrl } from "@/lib/site-url";
 import "@/styles/index.css";
+
+const siteUrl = getSiteUrl();
+/** Bump when replacing public/favicon.ico so browsers refetch (favicon is cached aggressively). */
+const FAVICON_CACHE_BUST = "1";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -15,7 +20,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.placeholder-domain.com"),
+  metadataBase: siteUrl,
   title: {
     default: "Placeholder Brand",
     template: "%s | Placeholder Brand",
@@ -47,9 +52,8 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    icon: `/favicon.ico?v=${FAVICON_CACHE_BUST}`,
+    shortcut: `/favicon.ico?v=${FAVICON_CACHE_BUST}`,
   },
 };
 
